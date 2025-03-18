@@ -1,7 +1,6 @@
-package com.example.madproject
+package com.example.madproject.sampledata
 
 import android.content.Context
-import androidx.room.Room
 
 object DatabaseInstance {
     @Volatile

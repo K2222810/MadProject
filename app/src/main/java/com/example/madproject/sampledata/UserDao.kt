@@ -1,4 +1,4 @@
-package com.example.madproject
+package com.example.madproject.sampledata
 
 import androidx.room.*
 
@@ -10,9 +10,6 @@ interface UserDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: User)
-
-    @Update
-    suspend fun updateUser(user: User)
 
     @Query("DELETE FROM users WHERE userName = :title") // Changed from name to title
     suspend fun deleteUserByTitle(title: String)

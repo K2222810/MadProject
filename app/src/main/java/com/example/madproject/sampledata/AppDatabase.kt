@@ -1,4 +1,4 @@
-package com.example.madproject
+package com.example.madproject.sampledata
 
 import android.content.Context
 import androidx.room.*
@@ -14,7 +14,7 @@ abstract class AppDatabase : RoomDatabase() {
             return Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
-                "book-database"
+                "user-database"
             )
                 .fallbackToDestructiveMigration()
                 .build()

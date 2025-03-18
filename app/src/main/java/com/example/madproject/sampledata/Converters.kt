@@ -1,4 +1,4 @@
-package com.example.madproject
+package com.example.madproject.sampledata
 
 import android.os.Build
 import androidx.annotation.RequiresApi
