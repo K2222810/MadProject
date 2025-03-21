@@ -162,10 +162,7 @@ fun LoginScreen(navController: NavController) {
 
             // Sign Up Navigation
             TextButton(
-                onClick = {
-                    // TODO: Navigate to signup screen once created
-                    // navController.navigate(Screen.SignupScreen.route)
-                },
+                onClick = { navController.navigate(Screen.SignupScreen.route) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Don't have an account? Sign Up")
