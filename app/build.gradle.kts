@@ -29,6 +29,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+
         }
     }
     compileOptions {
@@ -69,12 +71,15 @@ dependencies {
     implementation ( libs.androidx.ui.tooling.preview )
     implementation ( libs.androidx.material3 )
     implementation(libs.core)
+    implementation("androidx.compose.material:material-icons-extended:1.6.5")
+
 
     // navigation
     implementation(libs.androidx.navigation.compose)
     // Room dependencies with ksp
     implementation ( libs.androidx.room.runtime )
     implementation ( libs.androidx.room.ktx)
+    implementation(libs.androidx.espresso.core)
     ksp(libs.androidx.room.ksp) // Use KSP
 
     testImplementation(libs.junit)

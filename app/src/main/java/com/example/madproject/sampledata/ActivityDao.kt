@@ -10,6 +10,6 @@ interface ActivityDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertActivity(activity: Activity)
 
-    @Query("DELETE FROM activities WHERE ActivityID = :activityId")
+    @Query("DELETE FROM activities WHERE activityId = :activityId")
     suspend fun deleteActivityById(activityId: String)
 }

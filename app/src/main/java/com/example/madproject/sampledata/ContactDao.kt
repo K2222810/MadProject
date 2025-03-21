@@ -10,6 +10,6 @@ interface ContactDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContact(contact: Contact)
 
-    @Query("DELETE FROM contacts WHERE ContactID = :contactId")
+    @Query("DELETE FROM contacts WHERE contactId = :contactId")
     suspend fun deleteContactById(contactId: String)
 }

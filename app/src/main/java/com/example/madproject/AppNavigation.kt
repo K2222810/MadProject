@@ -11,13 +11,16 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.MainScreen.route // Default screen
+        startDestination = Screen.LoginScreen.route // Default screen
     ) {
         composable(Screen.MainScreen.route) {
             MainScreen(navController)
         }
         composable(Screen.AddTripsScreen.route){
             AddTripsScreen(navController)
+        }
+        composable(Screen.LoginScreen.route){
+            LoginScreen(navController)
         }
     }
 }

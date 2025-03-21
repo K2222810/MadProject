@@ -10,6 +10,6 @@ interface PositionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPosition(position: Position)
 
-    @Query("DELETE FROM positions WHERE PositionID = :positionId")
+    @Query("DELETE FROM positions WHERE positionId = :positionId")
     suspend fun deletePositionById(positionId: String)
 }

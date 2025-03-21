@@ -10,6 +10,6 @@ interface LocationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLocation(location: Location)
 
-    @Query("DELETE FROM locations WHERE LocationID = :locationId")
+    @Query("DELETE FROM locations WHERE locationId = :locationId")
     suspend fun deleteLocationById(locationId: String)
 }
