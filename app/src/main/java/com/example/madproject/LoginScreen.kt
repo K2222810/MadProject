@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.madproject.sampledata.DatabaseInstance
 import kotlinx.coroutines.Dispatchers
@@ -65,6 +66,9 @@ fun LoginScreen(navController: NavController) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Button(onClick = { navController.navigate(Screen.MainScreen.route) }, modifier = Modifier.size(270.dp, 50.dp)) {
+                Text(text = "skip login", fontSize = 24.sp)
+            }
             // Username Input
             OutlinedTextField(
                 value = username,
