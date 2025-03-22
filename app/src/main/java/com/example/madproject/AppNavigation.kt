@@ -19,6 +19,9 @@ fun AppNavigation() {
         composable(Screen.AddTripsScreen.route) {
             AddTripsScreen(navController)
         }
+        composable(Screen.AddMemberScreen.route) {
+            AddMemberScreen(navController)
+        }
         composable(Screen.LoginScreen.route) {
             LoginScreen(navController)
         }

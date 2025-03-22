@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -78,7 +79,7 @@ fun MainScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(100.dp))
-                Button(onClick = {}, modifier = Modifier.size(270.dp, 50.dp)) {
+                Button(onClick = { navController.navigate(Screen.AddMemberScreen.route) }, modifier = Modifier.size(270.dp, 50.dp)) {
                     Text(text = "Add members", fontSize = 24.sp)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
@@ -114,7 +115,8 @@ fun CreateDialog(onDismiss: () -> Unit) {
             Column(modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 ){
-                Text("Are you sure you want to send an alert?")
+                Text("Are you sure you want to send an alert?",textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth())
                 Row(modifier = Modifier.padding(16.dp),
                     horizontalArrangement = Arrangement.Center){
                     Button(onClick = onDismiss){ //Add additional functionality to the confirm button (send an alert)
