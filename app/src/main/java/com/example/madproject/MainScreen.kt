@@ -78,7 +78,11 @@ fun MainScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(100.dp))
+<<<<<<< Updated upstream
                 Button(onClick = {}, modifier = Modifier.size(270.dp, 50.dp)) {
+=======
+                Button(onClick = { navController.navigate(Screen.UserListScreen.route) }, modifier = Modifier.size(270.dp, 50.dp)) {
+>>>>>>> Stashed changes
                     Text(text = "Add members", fontSize = 24.sp)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
