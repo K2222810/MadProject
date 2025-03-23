@@ -7,6 +7,9 @@ sealed class Screen(val route: String) {
 =======
     object AddMemberScreen : Screen("add_member_screen")
     object UserListScreen : Screen("user_list_screen")
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     object LoginScreen : Screen("add_login_screen")
     object SignupScreen : Screen("add_Signup_screen")

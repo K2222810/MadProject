@@ -27,6 +27,9 @@ fun AppNavigation() {
         composable(Screen.UserListScreen.route){
             UserListScreen(navController)
         }
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         composable(Screen.LoginScreen.route) {
             LoginScreen(navController)
