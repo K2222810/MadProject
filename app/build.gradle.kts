@@ -43,6 +43,9 @@ android {
     // Add this if you're using Java Time APIs
     dependencies {
         coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+        implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+        implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+        implementation ("com.google.code.gson:gson:2.8.9")
     }
 
     kotlinOptions {
@@ -80,6 +83,7 @@ dependencies {
     implementation ( libs.androidx.room.runtime )
     implementation ( libs.androidx.room.ktx)
     implementation(libs.androidx.espresso.core)
+    implementation(libs.androidx.runtime.livedata)
     ksp(libs.androidx.room.ksp) // Use KSP
 
     testImplementation(libs.junit)
