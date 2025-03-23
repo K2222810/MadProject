@@ -40,7 +40,7 @@ import androidx.navigation.NavController
 @Composable
 fun MainScreen(
     navController: NavController
-){
+) {
     var alertActive by remember { mutableStateOf<Boolean?>(null) }
     Scaffold(
         floatingActionButton = {
@@ -54,43 +54,45 @@ fun MainScreen(
                 Text("+", color = Color.Green, fontSize = 36.sp)
             }
         }
-    ){ paddingValues ->
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues) // Ensures FAB does not overlap content
-        ){
+        ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(75.dp))
-                Row(modifier = Modifier.fillMaxWidth(),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.Center) {
-                    Button(onClick = {}, modifier = Modifier.size(150.dp, 150.dp), shape = RoundedCornerShape(30.dp)) {
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Button(
+                        onClick = {},
+                        modifier = Modifier.size(150.dp, 150.dp),
+                        shape = RoundedCornerShape(30.dp)
+                    ) {
                         Text(text = "GPS", fontSize = 24.sp)
                     }
                     Spacer(modifier = Modifier.width(50.dp))
-                    Button(onClick = {alertActive=true}, modifier = Modifier.size(150.dp, 150.dp), shape = RoundedCornerShape(30.dp), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+                    Button(
+                        onClick = { alertActive = true },
+                        modifier = Modifier.size(150.dp, 150.dp),
+                        shape = RoundedCornerShape(30.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) {
                         Text(text = "!", fontSize = 72.sp)
                     }
                 }
                 Spacer(modifier = Modifier.height(100.dp))
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                Button(onClick = {}, modifier = Modifier.size(270.dp, 50.dp)) {
-=======
-                Button(onClick = { navController.navigate(Screen.UserListScreen.route) }, modifier = Modifier.size(270.dp, 50.dp)) {
->>>>>>> Stashed changes
-=======
-                Button(onClick = { navController.navigate(Screen.UserListScreen.route) }, modifier = Modifier.size(270.dp, 50.dp)) {
->>>>>>> Stashed changes
-=======
-                Button(onClick = { navController.navigate(Screen.UserListScreen.route) }, modifier = Modifier.size(270.dp, 50.dp)) {
->>>>>>> Stashed changes
+                Button(
+                    onClick = { navController.navigate(Screen.UserListScreen.route) },
+                    modifier = Modifier.size(270.dp, 50.dp)
+                ) {
                     Text(text = "Add members", fontSize = 24.sp)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
@@ -112,34 +114,36 @@ fun MainScreen(
     }
 
     alertActive?.let {
-        CreateDialog(
-            onDismiss= { alertActive = null }
-        )
+        CreateAlert(onDismiss = { alertActive = null })
     }
 }
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateDialog(onDismiss: () -> Unit) {
-    BasicAlertDialog(onDismissRequest = onDismiss){
+fun CreateAlert(onDismiss: () -> Unit) {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
-            modifier = Modifier.wrapContentWidth().wrapContentHeight().padding(16.dp),
-            shape = MaterialTheme. shapes. large,
+            modifier = Modifier
+                .wrapContentWidth()
+                .wrapContentHeight()
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.large,
             tonalElevation = AlertDialogDefaults.TonalElevation
-        ){
-            Column(modifier = Modifier.padding(16.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-            ){
+            ) {
                 Text("Are you sure you want to send an alert?")
-                Row(modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.Center){
-                    Button(onClick = onDismiss){ //Add additional functionality to the confirm button (send an alert)
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Button(onClick = onDismiss) { //Add additional functionality to the confirm button (send an alert)
                         Text("Confirm")
                     }
                     Spacer(modifier = Modifier.width(30.dp))
-                    Button(onClick = onDismiss){
+                    Button(onClick = onDismiss) {
                         Text("Cancel")
                     }
                 }

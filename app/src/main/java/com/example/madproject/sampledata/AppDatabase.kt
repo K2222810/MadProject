@@ -3,6 +3,8 @@ package com.example.madproject.sampledata
 import android.content.Context
 import androidx.room.*
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
@@ -13,7 +15,7 @@ import androidx.room.RoomDatabase
         Status::class,
         Position::class
     ],
-    version = 1,
+    version = 2, // Increased from 1 to 2
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -36,6 +38,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "staysafe.db"
                 )
+                    // Simplest approach - just recreate the database
+                    // This will delete all data, but is fine during development
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { instance = it }

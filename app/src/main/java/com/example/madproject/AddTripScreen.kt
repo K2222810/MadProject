@@ -4,9 +4,6 @@ import android.app.DatePickerDialog
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -14,6 +11,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,8 +61,11 @@ fun AddTripsScreen(navController: NavController) {
                 if (users.isNotEmpty()) {
                     val user = users.first()
                     currentUserId = user.userId
-                    currentUsername = user.username
-                    Log.d(TAG, "Using real user: $currentUsername (${user.userId})")
+                    // Make sure username is not null before assigning
+                    user.username?.let { username ->
+                        currentUsername = username
+                        Log.d(TAG, "Using real user: $username (${user.userId})")
+                    }
                 } else {
                     Log.d(TAG, "No users found in database, using default")
                 }

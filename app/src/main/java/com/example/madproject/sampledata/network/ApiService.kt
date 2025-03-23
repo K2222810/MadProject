@@ -1,8 +1,7 @@
 package com.example.madproject.sampledata.network
 
-import retrofit2.Call
-import retrofit2.http.GET
 import com.example.madproject.sampledata.User
+import retrofit2.http.GET
 
 interface ApiService {
     @GET("users")

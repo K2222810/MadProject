@@ -11,7 +11,7 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.LoginScreen.route // Start with login screen
+        startDestination = Screen.LoginScreen.route
     ) {
         composable(Screen.MainScreen.route) {
             MainScreen(navController)
@@ -19,21 +19,6 @@ fun AppNavigation() {
         composable(Screen.AddTripsScreen.route) {
             AddTripsScreen(navController)
         }
-<<<<<<< Updated upstream
-=======
-        composable(Screen.AddMemberScreen.route) {
-            AddMemberScreen(navController)
-        }
-        composable(Screen.UserListScreen.route){
-            UserListScreen(navController)
-        }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         composable(Screen.LoginScreen.route) {
             LoginScreen(navController)
         }
@@ -45,6 +30,9 @@ fun AppNavigation() {
         }
         composable(Screen.ViewOtherTripsScreen.route) {
             ViewTripsScreen(navController, viewMyTrips = false)
+        }
+        composable(Screen.UserListScreen.route) {
+            UserListScreen(navController)
         }
     }
 }
