@@ -82,16 +82,22 @@ fun MainScreen(
                     Text(text = "Add members", fontSize = 24.sp)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
-                Button(onClick = {}, modifier = Modifier.size(270.dp, 50.dp)) {
+                Button(
+                    onClick = { navController.navigate(Screen.ViewMyTripsScreen.route) },
+                    modifier = Modifier.size(270.dp, 50.dp)
+                ) {
                     Text(text = "View my trips", fontSize = 24.sp)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
-                Button(onClick = {}, modifier = Modifier.size(270.dp, 50.dp)) {
+                Button(
+                    onClick = { navController.navigate(Screen.ViewOtherTripsScreen.route) },
+                    modifier = Modifier.size(270.dp, 50.dp)
+                ) {
                     Text(text = "View other trips", fontSize = 24.sp)
                 }
             }
         }
-        }
+    }
 
     alertActive?.let {
         CreateDialog(
@@ -113,7 +119,7 @@ fun CreateDialog(onDismiss: () -> Unit) {
         ){
             Column(modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                ){
+            ){
                 Text("Are you sure you want to send an alert?")
                 Row(modifier = Modifier.padding(16.dp),
                     horizontalArrangement = Arrangement.Center){

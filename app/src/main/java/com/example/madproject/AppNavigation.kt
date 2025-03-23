@@ -25,5 +25,11 @@ fun AppNavigation() {
         composable(Screen.SignupScreen.route) {
             SignupScreen(navController)
         }
+        composable(Screen.ViewMyTripsScreen.route) {
+            ViewTripsScreen(navController, viewMyTrips = true)
+        }
+        composable(Screen.ViewOtherTripsScreen.route) {
+            ViewTripsScreen(navController, viewMyTrips = false)
+        }
     }
 }

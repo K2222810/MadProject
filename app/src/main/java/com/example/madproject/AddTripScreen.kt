@@ -1,6 +1,7 @@
 package com.example.madproject
 
 import android.app.DatePickerDialog
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -20,11 +21,59 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import java.util.Calendar
+import com.example.madproject.sampledata.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.*
+
+// Define a tag for logging
+private const val TAG = "AddTripsScreen"
 
 @Composable
 fun AddTripsScreen(navController: NavController) {
     val context = LocalContext.current
+    val database = DatabaseInstance.getDatabase(context)
+    val scope = rememberCoroutineScope()
+
+    // For debugging - attempt to ensure the database exists
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            try {
+                val statusCount = database.statusDao().getAllStatuses().size
+                val locationCount = database.locationDao().getAllLocations().size
+                val activityCount = database.activityDao().getAllActivities().size
+                Log.d(TAG, "Database check: Statuses=$statusCount, Locations=$locationCount, Activities=$activityCount")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking database: ${e.message}", e)
+            }
+        }
+    }
+
+    // Get current user from login session if available, otherwise use default
+    var currentUserId by remember { mutableStateOf("default_user_id") }
+    var currentUsername by remember { mutableStateOf("default_username") }
+
+    // Try to get a real user from the database
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            try {
+                val users = database.userDao().getAllUsers()
+                if (users.isNotEmpty()) {
+                    val user = users.first()
+                    currentUserId = user.userId
+                    currentUsername = user.username
+                    Log.d(TAG, "Using real user: $currentUsername (${user.userId})")
+                } else {
+                    Log.d(TAG, "No users found in database, using default")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting user: ${e.message}", e)
+            }
+        }
+    }
+
+    // Trip details
     var activityName by remember { mutableStateOf("") }
     var activityDescription by remember { mutableStateOf("") }
     var activityLeave by remember { mutableStateOf("") }
@@ -33,19 +82,154 @@ fun AddTripsScreen(navController: NavController) {
     var toLocation by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("") }
 
+    // Store date objects separately for proper database timestamp conversion
+    var leaveDate by remember { mutableStateOf<Calendar?>(null) }
+    var arriveDate by remember { mutableStateOf<Calendar?>(null) }
+
     val statuses = listOf("Planned", "In Progress", "Completed", "Cancelled", "Other")
 
-    fun showDatePickerDialog(onDateSelected: (String) -> Unit) {
+    fun showDatePickerDialog(isLeaveTime: Boolean) {
         val calendar = Calendar.getInstance()
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                onDateSelected("$year-${month + 1}-$dayOfMonth")
+                val selectedCalendar = Calendar.getInstance()
+                selectedCalendar.set(year, month, dayOfMonth)
+
+                val formattedDate = "$year-${month + 1}-$dayOfMonth"
+                if (isLeaveTime) {
+                    activityLeave = formattedDate
+                    leaveDate = selectedCalendar
+                    Log.d(TAG, "Leave date set: $formattedDate, timestamp: ${selectedCalendar.timeInMillis}")
+                } else {
+                    activityArrive = formattedDate
+                    arriveDate = selectedCalendar
+                    Log.d(TAG, "Arrive date set: $formattedDate, timestamp: ${selectedCalendar.timeInMillis}")
+                }
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         ).show()
+    }
+
+    // Function to save trip to database
+    fun saveTrip() {
+        Log.d(TAG, "Attempting to save trip")
+
+        // Validate inputs
+        if (activityName.isBlank() || activityDescription.isBlank() ||
+            leaveDate == null || arriveDate == null ||
+            fromLocation.isBlank() || toLocation.isBlank() ||
+            selectedStatus.isBlank()) {
+            Log.w(TAG, "Validation failed - missing fields")
+            Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Log.d(TAG, "Validation passed, saving to database...")
+
+        scope.launch {
+            try {
+                // Generate unique IDs
+                val activityId = UUID.randomUUID().toString()
+                val fromLocationId = UUID.randomUUID().toString()
+                val toLocationId = UUID.randomUUID().toString()
+                val statusId = UUID.randomUUID().toString()
+
+                Log.d(TAG, "Generated IDs: Activity=$activityId, FromLoc=$fromLocationId, ToLoc=$toLocationId, Status=$statusId")
+
+                // Create and save from location
+                val fromLoc = Location(
+                    locationId = fromLocationId,
+                    name = fromLocation,
+                    description = "Created from AddTripsScreen",
+                    address = "",  // Default values since we don't collect these
+                    postcode = "",
+                    latitude = 0.0,
+                    longitude = 0.0
+                )
+
+                // Create and save to location
+                val toLoc = Location(
+                    locationId = toLocationId,
+                    name = toLocation,
+                    description = "Created from AddTripsScreen",
+                    address = "",
+                    postcode = "",
+                    latitude = 0.0,
+                    longitude = 0.0
+                )
+
+                // Create and save status
+                val status = Status(
+                    statusId = statusId,
+                    name = selectedStatus,
+                    order = statuses.indexOf(selectedStatus)
+                )
+
+                // Create and save activity
+                val activity = Activity(
+                    activityId = activityId,
+                    name = activityName,
+                    userId = currentUserId,
+                    username = currentUsername,
+                    description = activityDescription,
+                    fromLocationId = fromLocationId,
+                    fromLocationName = fromLocation,
+                    leaveTime = leaveDate?.timeInMillis ?: System.currentTimeMillis(),
+                    toLocationId = toLocationId,
+                    toLocationName = toLocation,
+                    arriveTime = arriveDate?.timeInMillis ?: System.currentTimeMillis(),
+                    statusId = statusId,
+                    statusName = selectedStatus
+                )
+
+                Log.d(TAG, "Created all entities, now saving to database")
+
+                // Save everything to database with detailed error logging
+                var savedSuccessfully = false
+
+                try {
+                    withContext(Dispatchers.IO) {
+                        Log.d(TAG, "Saving location 1: $fromLocation")
+                        database.locationDao().insertLocation(fromLoc)
+
+                        Log.d(TAG, "Saving location 2: $toLocation")
+                        database.locationDao().insertLocation(toLoc)
+
+                        Log.d(TAG, "Saving status: $selectedStatus")
+                        database.statusDao().insertStatus(status)
+
+                        Log.d(TAG, "Saving activity: $activityName")
+                        database.activityDao().insertActivity(activity)
+
+                        // Verify data was saved
+                        val locations = database.locationDao().getAllLocations()
+                        val statuses = database.statusDao().getAllStatuses()
+                        val activities = database.activityDao().getAllActivities()
+
+                        Log.d(TAG, "After save: Locations=${locations.size}, Statuses=${statuses.size}, Activities=${activities.size}")
+                        savedSuccessfully = activities.any { it.activityId == activityId }
+                    }
+
+                    if (savedSuccessfully) {
+                        Log.d(TAG, "Database save successful, activity verified in database")
+                        Toast.makeText(context, "Trip saved successfully!", Toast.LENGTH_SHORT).show()
+                        navController.popBackStack()
+                    } else {
+                        Log.e(TAG, "Data appeared to save but activity not found in database")
+                        Toast.makeText(context, "Error: Data not saved to database", Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Database save error: ${e.message}", e)
+                    Toast.makeText(context, "Error saving trip: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "General error in saveTrip: ${e.message}", e)
+                Toast.makeText(context, "Unexpected error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -65,11 +249,11 @@ fun AddTripsScreen(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            Button(onClick = { showDatePickerDialog { activityLeave = it } }, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { showDatePickerDialog(true) }, modifier = Modifier.fillMaxWidth()) {
                 Text(if (activityLeave.isEmpty()) "Select Leave Time" else "Leave Time: $activityLeave")
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { showDatePickerDialog { activityArrive = it } }, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { showDatePickerDialog(false) }, modifier = Modifier.fillMaxWidth()) {
                 Text(if (activityArrive.isEmpty()) "Select Arrive Time" else "Arrive Time: $activityArrive")
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -98,14 +282,7 @@ fun AddTripsScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = {
-                    if (activityName.isNotBlank() && activityDescription.isNotBlank() && activityLeave.isNotBlank() && activityArrive.isNotBlank() && fromLocation.isNotBlank() && toLocation.isNotBlank() && selectedStatus.isNotBlank()) {
-                        Toast.makeText(context, "Trip saved!", Toast.LENGTH_SHORT).show()
-                        navController.popBackStack()
-                    } else {
-                        Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
-                    }
-                },
+                onClick = { saveTrip() },
                 modifier = Modifier.padding(8.dp).fillMaxWidth().height(50.dp)
             ) {
                 Text("Save Trip", fontSize = 18.sp)
