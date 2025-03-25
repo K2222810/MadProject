@@ -15,6 +15,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["MAPS_API_KEY"] = "AIzaSyD-1QiAUwerzy6yNIcIoY6fRpDS96jJ__o"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -76,6 +77,7 @@ dependencies {
     // Room database
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.places)
     ksp(libs.androidx.room.ksp)
 
     // LiveData integration with Compose
@@ -108,4 +110,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.appcompat)
+    implementation("com.google.android.material:material:1.12.0")
+    implementation(libs.play.services.places)
+
 }
