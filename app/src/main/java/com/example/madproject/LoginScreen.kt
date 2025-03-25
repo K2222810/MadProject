@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.madproject.sampledata.DatabaseInstance
+import com.example.madproject.sampledata.UserSessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,6 +35,15 @@ fun LoginScreen(navController: NavController) {
     var passwordError by remember { mutableStateOf(false) }
     var loginError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+
+    // Check if user is already logged in
+    LaunchedEffect(Unit) {
+        if (UserSessionManager.isLoggedIn.value) {
+            navController.navigate(Screen.MainScreen.route) {
+                popUpTo(Screen.LoginScreen.route) { inclusive = true }
+            }
+        }
+    }
 
     // Validate username format
     fun isValidUsername(username: String): Boolean {
@@ -66,7 +76,10 @@ fun LoginScreen(navController: NavController) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Button(onClick = { navController.navigate(Screen.MainScreen.route) }, modifier = Modifier.size(270.dp, 50.dp)) {
+            Button(onClick = {
+                // Skip login should NOT set a user session
+                navController.navigate(Screen.MainScreen.route)
+            }, modifier = Modifier.size(270.dp, 50.dp)) {
                 Text(text = "skip login", fontSize = 24.sp)
             }
             // Username Input
@@ -138,8 +151,8 @@ fun LoginScreen(navController: NavController) {
                                 }
 
                                 if (user != null && user.password == password) {
-                                    // Login successful
-                                    // TODO: Save user session data as needed
+                                    // Login successful - Save user session
+                                    UserSessionManager.startSession(user)
 
                                     // Navigate to main screen
                                     navController.navigate(Screen.MainScreen.route) {
