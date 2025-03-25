@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,14 +48,36 @@ fun UserListScreen(
     val isLoggedIn = UserSessionManager.isLoggedIn.value
     val currentUserId = UserSessionManager.userId.value
 
-    // State for users - we'll maintain two lists:
-    // 1. allUsers - all users from the database
-    // 2. displayedUsers - users currently displayed in the UI
+    // State for users
     var allUsers by remember { mutableStateOf<List<User>>(emptyList()) }
     var displayedUsers by remember { mutableStateOf<List<User>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var userToRemove by remember { mutableStateOf<User?>(null) }
+    var showDeleteOptions by remember { mutableStateOf<User?>(null) }
+
+    // Search state
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Function to filter users based on search query
+    fun filterUsers(query: String) {
+        if (query.isBlank()) {
+            displayedUsers = allUsers
+            return
+        }
+
+        val lowerCaseQuery = query.lowercase()
+        displayedUsers = allUsers.filter { user ->
+            val firstName = user.firstName?.lowercase() ?: ""
+            val lastName = user.lastName?.lowercase() ?: ""
+            val fullName = "$firstName $lastName"
+            val phone = user.phone?.lowercase() ?: ""
+            val username = user.username?.lowercase() ?: ""
+
+            fullName.contains(lowerCaseQuery) ||
+                    phone.contains(lowerCaseQuery) ||
+                    username.contains(lowerCaseQuery)
+        }
+    }
 
     // Function to refresh users from database
     fun loadUsers() {
@@ -67,8 +90,12 @@ fun UserListScreen(
                     val users = database.userDao().getAllUsers()
                     Log.d(TAG, "Loaded ${users.size} users from database")
                     allUsers = users
-                    // Initially, display all users
-                    displayedUsers = users
+                    // Apply current search filter
+                    if (searchQuery.isBlank()) {
+                        displayedUsers = users
+                    } else {
+                        filterUsers(searchQuery)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading users: ${e.message}", e)
@@ -79,8 +106,8 @@ fun UserListScreen(
         }
     }
 
-    // Function to remove a user from the displayed list (not from the database)
-    fun removeUserFromList(user: User) {
+    // Function to remove a user from the list
+    fun removeUserFromList(user: User, permanent: Boolean) {
         if (user.userId == currentUserId) {
             Toast.makeText(context, "You cannot remove yourself from the list", Toast.LENGTH_LONG).show()
             return
@@ -88,7 +115,41 @@ fun UserListScreen(
 
         // Filter user out of the displayed list
         displayedUsers = displayedUsers.filter { it.userId != user.userId }
-        Toast.makeText(context, "User removed from list", Toast.LENGTH_SHORT).show()
+
+        if (permanent) {
+            // Also remove from database if permanent removal is chosen
+            scope.launch {
+                try {
+                    // Get contacts for the current user
+                    val contacts = withContext(Dispatchers.IO) {
+                        database.contactDao().getAllContacts()
+                    }
+
+                    // Find the contact entry connecting current user to the selected user
+                    val contactToDelete = contacts.firstOrNull {
+                        it.userId == currentUserId && it.contactUserId == user.userId
+                    }
+
+                    if (contactToDelete != null) {
+                        // Delete from database
+                        withContext(Dispatchers.IO) {
+                            database.contactDao().deleteContactById(contactToDelete.contactId)
+                        }
+                        Toast.makeText(context, "User permanently removed from contacts", Toast.LENGTH_SHORT).show()
+
+                        // Also remove from allUsers if it was in there
+                        allUsers = allUsers.filter { it.userId != user.userId }
+                    } else {
+                        Toast.makeText(context, "Contact relationship not found in database", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deleting contact: ${e.message}", e)
+                    Toast.makeText(context, "Error removing contact: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+            }
+        } else {
+            Toast.makeText(context, "User removed from list (temporarily)", Toast.LENGTH_SHORT).show()
+        }
     }
 
     // Load users when screen is first displayed
@@ -96,29 +157,32 @@ fun UserListScreen(
         loadUsers()
     }
 
-    // Remove confirmation dialog
-    userToRemove?.let { user ->
+    // Delete options dialog
+    showDeleteOptions?.let { user ->
         AlertDialog(
-            onDismissRequest = { userToRemove = null },
-            title = { Text("Remove from List") },
+            onDismissRequest = { showDeleteOptions = null },
+            title = { Text("Remove User") },
             text = {
-                Text("Are you sure you want to remove user '${user.username}' from the list? This will only hide them from this view.")
+                Text("Do you want to temporarily hide this user or permanently remove them from your contacts?")
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        removeUserFromList(user)
-                        userToRemove = null
+                        removeUserFromList(user, true) // Permanent deletion
+                        showDeleteOptions = null
                     }
                 ) {
-                    Text("Remove")
+                    Text("Remove Permanently")
                 }
             },
             dismissButton = {
-                OutlinedButton(
-                    onClick = { userToRemove = null }
+                Button(
+                    onClick = {
+                        removeUserFromList(user, false) // Just hide temporarily
+                        showDeleteOptions = null
+                    }
                 ) {
-                    Text("Cancel")
+                    Text("Hide Temporarily")
                 }
             }
         )
@@ -137,6 +201,7 @@ fun UserListScreen(
                     // Reset button - shows all users again
                     if (displayedUsers.size < allUsers.size) {
                         TextButton(onClick = {
+                            searchQuery = ""
                             displayedUsers = allUsers
                             Toast.makeText(context, "Showing all users", Toast.LENGTH_SHORT).show()
                         }) {
@@ -213,65 +278,147 @@ fun UserListScreen(
                         }
                     }
                 }
-                displayedUsers.isEmpty() -> {
-                    // Empty state
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        if (allUsers.isEmpty()) {
-                            // No users at all
-                            Text(
-                                text = "No Users Found",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { navController.navigate(Screen.AddUserScreen.route) }) {
-                                Text("Add User")
-                            }
-                        } else {
-                            // Users exist but all have been removed from display
-                            Text(
-                                text = "All Users Removed",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "You've removed all users from the list",
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = {
-                                displayedUsers = allUsers
-                            }) {
-                                Text("Show All Users")
-                            }
-                        }
-                    }
-                }
                 else -> {
-                    // User list
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    // Main content with search and user list
+                    Column(
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        items(displayedUsers) { user ->
-                            UserCard(
-                                user = user,
-                                currentUserId = currentUserId,
-                                onRemove = {
-                                    if (user.userId == currentUserId) {
-                                        Toast.makeText(context, "You cannot remove yourself from the list", Toast.LENGTH_LONG).show()
-                                    } else {
-                                        userToRemove = user
+                        // Search bar
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = {
+                                searchQuery = it
+                                filterUsers(it)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            placeholder = { Text("Search by name or phone") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = "Search"
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = {
+                                        searchQuery = ""
+                                        displayedUsers = allUsers
+                                    }) {
+                                        Icon(
+                                            Icons.Default.Clear,
+                                            contentDescription = "Clear search"
+                                        )
                                     }
                                 }
+                            },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                             )
+                        )
+
+                        // Display search results count if searching
+                        if (searchQuery.isNotEmpty()) {
+                            Text(
+                                text = "Found ${displayedUsers.size} results",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        if (displayedUsers.isEmpty()) {
+                            // Empty results state
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                if (searchQuery.isNotEmpty()) {
+                                    // No search results
+                                    Text(
+                                        text = "No users found matching '$searchQuery'",
+                                        fontSize = 16.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(onClick = {
+                                        searchQuery = ""
+                                        displayedUsers = allUsers
+                                    }) {
+                                        Text("Clear Search")
+                                    }
+                                } else if (allUsers.isEmpty()) {
+                                    // No users at all
+                                    Text(
+                                        text = "No Users Found",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(onClick = { navController.navigate(Screen.AddUserScreen.route) }) {
+                                        Text("Add User")
+                                    }
+                                } else {
+                                    // Users exist but all have been removed from display
+                                    Text(
+                                        text = "All Users Removed",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "You've removed all users from the list",
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(onClick = {
+                                        displayedUsers = allUsers
+                                    }) {
+                                        Text("Show All Users")
+                                    }
+                                }
+                            }
+                        } else {
+                            // User list
+                            LazyColumn(
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(displayedUsers) { user ->
+                                    UserCard(
+                                        user = user,
+                                        currentUserId = currentUserId,
+                                        onRemove = {
+                                            if (user.userId == currentUserId) {
+                                                Toast.makeText(context, "You cannot remove yourself from the list", Toast.LENGTH_LONG).show()
+                                            } else {
+                                                showDeleteOptions = user
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Button to add a new user
+                        Button(
+                            onClick = { navController.navigate(Screen.AddUserScreen.route) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text("Add New User")
                         }
                     }
                 }

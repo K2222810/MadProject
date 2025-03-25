@@ -5,6 +5,9 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
 }
 
+// Use hardcoded API key for now
+val mapsApiKey = "YOUR_API_KEY_HERE" // Replace with your actual API key
+
 android {
     namespace = "com.example.madproject"
     compileSdk = 35
@@ -20,6 +23,9 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Set the Maps API key directly
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -59,7 +65,16 @@ android {
 }
 
 dependencies {
-    // Core & Compose dependencies
+    implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.constraintlayout)
+
+    // Remove these lines if they exist in your build.gradle:
+    // implementation(libs.play.services.maps.v1910)
+    // implementation(libs.androidx.appcompat.v170)
+
+    // Core & Compose dependencies - Keep these as they are
     implementation(libs.core)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -102,10 +117,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-    // Google Maps
-    implementation(libs.play.services.maps)
-    implementation(libs.play.services.location)
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.appcompat)
 }
