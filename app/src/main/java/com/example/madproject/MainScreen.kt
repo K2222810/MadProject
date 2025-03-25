@@ -131,18 +131,58 @@ fun MainScreen(
                         Text(text = "!", fontSize = 72.sp)
                     }
                 }
-                Spacer(modifier = Modifier.height(100.dp))
-                Button(
-                    onClick = { navController.navigate(Screen.UserListScreen.route) },
-                    modifier = Modifier.size(270.dp, 50.dp)
-                ) {
-                    Text(text = "Add members", fontSize = 24.sp)
-                }
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(80.dp))
+
+                // User Management Section
+                Text(
+                    text = "User Management",
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Add user button
                 Button(
                     onClick = {
                         if (!isLoggedIn) {
-                            // If not logged in, redirect to login
+                            navController.navigate(Screen.LoginScreen.route)
+                        } else {
+                            navController.navigate(Screen.AddUserScreen.route)
+                        }
+                    },
+                    modifier = Modifier.size(270.dp, 50.dp)
+                ) {
+                    Text(text = "Add User", fontSize = 18.sp)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // View users button
+                Button(
+                    onClick = {
+                        if (!isLoggedIn) {
+                            navController.navigate(Screen.LoginScreen.route)
+                        } else {
+                            navController.navigate(Screen.UserListScreen.route)
+                        }
+                    },
+                    modifier = Modifier.size(270.dp, 50.dp)
+                ) {
+                    Text(text = "View Users", fontSize = 18.sp)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Trip Management Section
+                Text(
+                    text = "Trip Management",
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        if (!isLoggedIn) {
                             navController.navigate(Screen.LoginScreen.route)
                         } else {
                             navController.navigate(Screen.ViewMyTripsScreen.route)
@@ -150,7 +190,7 @@ fun MainScreen(
                     },
                     modifier = Modifier.size(270.dp, 50.dp)
                 ) {
-                    Text(text = "View trips", fontSize = 24.sp)
+                    Text(text = "View Trips", fontSize = 18.sp)
                 }
             }
         }
