@@ -296,7 +296,7 @@ fun CreateAlert(onDismiss: () -> Unit) {
 
     var message by remember { mutableStateOf("") }
     val locationDescription by remember {
-        mutableStateOf("Current location") // This could be enhanced with actual GPS coordinates
+        mutableStateOf("Current location")
     }
 
     // Observe the alert status

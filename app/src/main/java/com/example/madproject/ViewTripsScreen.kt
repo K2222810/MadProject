@@ -112,10 +112,6 @@ fun ViewTripsScreen(
                 withContext(Dispatchers.IO) {
                     // Delete the activity
                     database.activityDao().deleteActivityById(trip.activityId)
-
-                    // Optionally, also clean up related data (locations and status)
-                    // This is a basic implementation - in a real app, you might want to check
-                    // if these are used by other activities before deleting
                     database.locationDao().deleteLocationById(trip.fromLocationId)
                     database.locationDao().deleteLocationById(trip.toLocationId)
                     database.statusDao().deleteStatusById(trip.statusId)
