@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
@@ -34,13 +36,27 @@ fun EditUserScreen(
     navController: NavController,
     userId: String
 ) {
+    // Check for empty userId
     val context = LocalContext.current
+
+    if (userId.isEmpty()) {
+        LaunchedEffect(Unit) {
+            Log.e(TAG, "Empty userId provided to EditUserScreen")
+            Toast.makeText(context, "Error: Invalid user ID", Toast.LENGTH_LONG).show()
+            navController.popBackStack()
+        }
+        return
+    }
+
     val database = DatabaseInstance.getDatabase(context)
     val scope = rememberCoroutineScope()
 
     // Check if current user is logged in
     val isLoggedIn = UserSessionManager.isLoggedIn.value
     val currentUserId = UserSessionManager.userId.value
+
+    // Confirm dialogs
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     // State for user data
     var firstName by remember { mutableStateOf("") }
@@ -74,53 +90,63 @@ fun EditUserScreen(
 
     // Load user data
     LaunchedEffect(userId, currentUserId) {
-        withContext(Dispatchers.IO) {
-            try {
-                // Check if user is logged in
-                if (!isLoggedIn) {
-                    loadError = "Please login to edit user information"
-                    isLoading = false
-                    return@withContext
-                }
-
-                // Fetch user data
-                val userToEdit = database.userDao().getAllUsers().find { it.userId == userId }
-
-                if (userToEdit != null) {
-                    // Check authorization - Only allow users to edit their own account
-                    // In a real app, you might have admin privileges
-                    isAuthorized = userId == currentUserId
-
-                    if (!isAuthorized) {
-                        loadError = "You are not authorized to edit this user"
+        try {
+            Log.d(TAG, "Starting to load user with ID: $userId")
+            withContext(Dispatchers.IO) {
+                try {
+                    // Check if user is logged in
+                    if (!isLoggedIn) {
+                        loadError = "Please login to edit user information"
                         isLoading = false
                         return@withContext
                     }
 
-                    // Populate form with user data
-                    userToEdit.firstName?.let { firstName = it }
-                    userToEdit.lastName?.let { lastName = it }
-                    userToEdit.phone?.let { phone = it }
-                    userToEdit.username?.let { username = it }
-                    userToEdit.password?.let { password = it }
-                    confirmPassword = password
+                    // Fetch user data
+                    val userToEdit = database.userDao().getAllUsers().find { it.userId == userId }
 
-                    // Save location and timestamp
-                    userToEdit.latitude?.let { latitude = it }
-                    userToEdit.longitude?.let { longitude = it }
-                    userToEdit.timestamp?.let { timestamp = it }
+                    if (userToEdit != null) {
+                        // Check authorization - Only allow users to edit their own account
+                        isAuthorized = userId == currentUserId
 
-                    Log.d(TAG, "Loaded user data for: $firstName $lastName")
-                } else {
-                    loadError = "User not found"
-                    Log.e(TAG, "User not found with ID: $userId")
+                        if (!isAuthorized) {
+                            loadError = "You are not authorized to edit this user"
+                            isLoading = false
+                            return@withContext
+                        }
+
+                        // Populate form with user data
+                        userToEdit.firstName?.let { firstName = it }
+                        userToEdit.lastName?.let { lastName = it }
+                        userToEdit.phone?.let { phone = it }
+                        userToEdit.username?.let { username = it }
+                        userToEdit.password?.let { password = it }
+                        confirmPassword = password
+
+                        // Save location and timestamp
+                        userToEdit.latitude?.let { latitude = it }
+                        userToEdit.longitude?.let { longitude = it }
+                        userToEdit.timestamp?.let { timestamp = it }
+
+                        Log.d(TAG, "Loaded user data for: $firstName $lastName")
+                    } else {
+                        loadError = "User not found"
+                        Log.e(TAG, "User not found with ID: $userId")
+                    }
+                } catch (e: Exception) {
+                    loadError = "Error loading user data: ${e.localizedMessage}"
+                    Log.e(TAG, "Error loading user: ${e.message}", e)
+                } finally {
+                    isLoading = false
                 }
-            } catch (e: Exception) {
-                loadError = "Error loading user data: ${e.localizedMessage}"
-                Log.e(TAG, "Error loading user: ${e.message}", e)
-            } finally {
-                isLoading = false
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Critical error in LaunchedEffect: ${e.message}", e)
+            Toast.makeText(
+                context,
+                "An unexpected error occurred: ${e.localizedMessage}",
+                Toast.LENGTH_LONG
+            ).show()
+            navController.popBackStack()
         }
     }
 
@@ -197,10 +223,124 @@ fun EditUserScreen(
         }
     }
 
+    // Function to delete the account
+    fun deleteAccount() {
+        if (!isLoggedIn || !isAuthorized) {
+            Toast.makeText(context, "Not authorized to delete this account", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        scope.launch {
+            try {
+                // Step 1: Delete all contacts associated with this user
+                withContext(Dispatchers.IO) {
+                    val allContacts = database.contactDao().getAllContacts()
+
+                    // Delete contacts where this user is either the owner or the contact
+                    val contactsToDelete = allContacts.filter {
+                        it.userId == userId || it.contactUserId == userId
+                    }
+
+                    for (contact in contactsToDelete) {
+                        database.contactDao().deleteContactById(contact.contactId)
+                    }
+
+                    Log.d(TAG, "Deleted ${contactsToDelete.size} contacts for user $userId")
+
+                    // Step 2: Delete all friend requests associated with this user
+                    try {
+                        val friendRequestDao = database.friendRequestDao()
+                        val allRequests = friendRequestDao.getAllFriendRequests()
+                        val requestsToDelete = allRequests.filter {
+                            it.senderId == userId || it.receiverId == userId
+                        }
+
+                        for (request in requestsToDelete) {
+                            friendRequestDao.deleteFriendRequest(request.requestId)
+                        }
+
+                        Log.d(TAG, "Deleted ${requestsToDelete.size} friend requests for user $userId")
+                    } catch (e: Exception) {
+                        // If friend request table doesn't exist, just log and continue
+                        Log.w(TAG, "Couldn't delete friend requests, may not exist: ${e.message}")
+                    }
+
+                    // Step 3: Delete all activities created by this user
+                    val activitiesToDelete = database.activityDao().getAllActivities()
+                        .filter { it.userId == userId }
+
+                    for (activity in activitiesToDelete) {
+                        // Also delete associated locations and statuses
+                        try {
+                            database.locationDao().deleteLocationById(activity.fromLocationId)
+                            database.locationDao().deleteLocationById(activity.toLocationId)
+                            database.statusDao().deleteStatusById(activity.statusId)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Error deleting activity related data: ${e.message}")
+                        }
+
+                        database.activityDao().deleteActivityById(activity.activityId)
+                    }
+
+                    Log.d(TAG, "Deleted ${activitiesToDelete.size} activities for user $userId")
+
+                    // Step 4: Finally, delete the user
+                    database.userDao().deleteUserById(userId)
+                    Log.d(TAG, "Deleted user $userId")
+                }
+
+                // Step 5: Log out the user if they deleted their own account
+                if (userId == currentUserId) {
+                    UserSessionManager.endSession()
+                }
+
+                Toast.makeText(context, "Account deleted successfully", Toast.LENGTH_LONG).show()
+
+                // Navigate back to login screen
+                navController.navigate(Screen.LoginScreen.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting account: ${e.message}", e)
+                Toast.makeText(context, "Error deleting account: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // Delete account confirmation dialog
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Delete Account") },
+            text = {
+                Text("Are you sure you want to delete your account? This action cannot be undone and will delete all your data including trips, contacts, and messages.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        deleteAccount()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete My Account")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit User") },
+                title = { Text("Edit Profile") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -448,7 +588,25 @@ fun EditUserScreen(
                             onClick = { updateUser() },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Update User")
+                            Text("Update Profile")
+                        }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // Delete Account Button
+                        OutlinedButton(
+                            onClick = { showDeleteConfirmation = true },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Account"
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete My Account", color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

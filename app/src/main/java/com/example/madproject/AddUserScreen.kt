@@ -18,10 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.madproject.sampledata.Contact
-import com.example.madproject.sampledata.DatabaseInstance
-import com.example.madproject.sampledata.User
-import com.example.madproject.sampledata.UserSessionManager
+import com.example.madproject.sampledata.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,13 +38,14 @@ fun AddUserScreen(
     // Check if current user is logged in
     val isLoggedIn = UserSessionManager.isLoggedIn.value
     val currentUserId = UserSessionManager.userId.value
+    val currentUsername = UserSessionManager.username.value
 
     // State for user input
     var searchUsername by remember { mutableStateOf("") }
     var searchResult by remember { mutableStateOf<User?>(null) }
     var isSearching by remember { mutableStateOf(false) }
     var searchError by remember { mutableStateOf<String?>(null) }
-    var contactLabel by remember { mutableStateOf("") }
+    var requestMessage by remember { mutableStateOf("") }
 
     // Function to search for a user by username
     fun searchUser() {
@@ -70,7 +68,7 @@ fun AddUserScreen(
                     if (user.userId == currentUserId) {
                         searchError = "You cannot add yourself as a contact"
                     } else {
-                        // Check if already a contact
+                        // Check if already a contact or if there's a pending request
                         val contacts = withContext(Dispatchers.IO) {
                             database.contactDao().getAllContacts()
                         }
@@ -81,9 +79,27 @@ fun AddUserScreen(
 
                         if (isAlreadyContact) {
                             searchError = "This user is already in your contacts"
-                        } else {
-                            searchResult = user
+                            return@launch
                         }
+
+                        // Check for existing friend requests
+                        val existingRequests = withContext(Dispatchers.IO) {
+                            database.friendRequestDao().getRequestsBetweenUsers(currentUserId, user.userId)
+                        }
+
+                        if (existingRequests.isNotEmpty()) {
+                            val pendingRequest = existingRequests.find { it.status == "PENDING" }
+                            if (pendingRequest != null) {
+                                if (pendingRequest.senderId == currentUserId) {
+                                    searchError = "You already sent a friend request to this user"
+                                } else {
+                                    searchError = "This user already sent you a friend request. Check your friend requests."
+                                }
+                                return@launch
+                            }
+                        }
+
+                        searchResult = user
                     }
                 } else {
                     searchError = "User not found"
@@ -97,31 +113,33 @@ fun AddUserScreen(
         }
     }
 
-    // Function to add user to contacts
-    fun addUserToContacts() {
+    // Function to send friend request
+    fun sendFriendRequest() {
         if (searchResult == null) {
             return
         }
 
         scope.launch {
             try {
-                val newContact = Contact(
-                    contactId = UUID.randomUUID().toString(),
-                    userId = currentUserId,
-                    contactUserId = searchResult!!.userId,
-                    label = contactLabel.ifBlank { "Contact" },
-                    dateCreated = System.currentTimeMillis()
+                val newRequest = FriendRequest(
+                    requestId = UUID.randomUUID().toString(),
+                    senderId = currentUserId,
+                    senderUsername = currentUsername,
+                    receiverId = searchResult!!.userId,
+                    status = "PENDING",
+                    message = requestMessage.ifBlank { "I'd like to add you as a contact" },
+                    timestamp = System.currentTimeMillis()
                 )
 
                 withContext(Dispatchers.IO) {
-                    database.contactDao().insertContact(newContact)
+                    database.friendRequestDao().insertFriendRequest(newRequest)
                 }
 
-                Toast.makeText(context, "User added to contacts", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Friend request sent", Toast.LENGTH_SHORT).show()
                 navController.popBackStack()
             } catch (e: Exception) {
-                Log.e(TAG, "Error adding contact: ${e.message}", e)
-                Toast.makeText(context, "Error adding contact: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Log.e(TAG, "Error sending friend request: ${e.message}", e)
+                Toast.makeText(context, "Error sending friend request: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -129,7 +147,7 @@ fun AddUserScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Existing User") },
+                title = { Text("Add Contact") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -162,7 +180,7 @@ fun AddUserScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "You need to login to add users to your contacts",
+                        text = "You need to login to add contacts",
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(24.dp))
@@ -179,7 +197,7 @@ fun AddUserScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Add Existing User to Contacts",
+                        text = "Search for Contacts",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -248,25 +266,34 @@ fun AddUserScreen(
                                     Spacer(modifier = Modifier.height(16.dp))
 
                                     OutlinedTextField(
-                                        value = contactLabel,
-                                        onValueChange = { contactLabel = it },
-                                        label = { Text("Contact Label (optional)") },
-                                        placeholder = { Text("Friend, Colleague, etc.") },
-                                        singleLine = true,
+                                        value = requestMessage,
+                                        onValueChange = { requestMessage = it },
+                                        label = { Text("Friend Request Message (optional)") },
+                                        placeholder = { Text("I'd like to add you as a contact") },
                                         modifier = Modifier.fillMaxWidth()
                                     )
 
                                     Spacer(modifier = Modifier.height(16.dp))
 
                                     Button(
-                                        onClick = { addUserToContacts() },
+                                        onClick = { sendFriendRequest() },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text("Add to Contacts")
+                                        Text("Send Friend Request")
                                     }
                                 }
                             }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Link to view friend requests
+                    TextButton(
+                        onClick = { navController.navigate(Screen.FriendRequestsScreen.route) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("View My Friend Requests")
                     }
                 }
             }

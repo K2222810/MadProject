@@ -6,7 +6,7 @@ plugins {
 }
 
 // Use hardcoded API key for now
-val mapsApiKey = "YOUR_API_KEY_HERE" // Replace with your actual API key
+val mapsApiKey = "AIzaSyD-1QiAUwerzy6yNIcIoY6fRpDS96jJ__o" // Replace with your actual API key
 
 android {
     namespace = "com.example.madproject"

@@ -1,6 +1,5 @@
 package com.example.madproject
 
-import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -211,6 +210,24 @@ fun UserListScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    // Profile button
+                    IconButton(
+                        onClick = {
+                            if (isLoggedIn) {
+                                // Navigate to edit user screen with current user ID
+                                navController.navigate(Screen.EditUserScreen.createRoute(currentUserId))
+                            } else {
+                                Toast.makeText(context, "Please login first", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
@@ -407,22 +424,57 @@ fun UserListScreen(
                                 Text("Add Contact")
                             }
 
-                            // Maps button
+                            // Friend requests button
                             Button(
-                                onClick = {
-                                    try {
-                                        // Navigate to the MapsMarker screen
-                                        val intent = Intent(context, MapsMarker::class.java)
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Error launching maps: ${e.message}", e)
-                                        Toast.makeText(context, "Could not open maps: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                                    }
-                                },
+                                onClick = { navController.navigate(Screen.FriendRequestsScreen.route) },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("View Map")
+                                Text("Friend Requests")
                             }
+                        }
+
+                        // My Profile button
+                        Button(
+                            onClick = {
+                                if (isLoggedIn) {
+                                    navController.navigate(Screen.EditUserScreen.createRoute(currentUserId))
+                                } else {
+                                    Toast.makeText(context, "Please login first", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "My Profile",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Edit My Profile")
+                        }
+
+                        // Maps button
+                        Button(
+                            onClick = {
+                                try {
+                                    // Navigate to the map screen
+                                    navController.navigate(Screen.MapScreen.route)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Error navigating to map: ${e.message}", e)
+                                    Toast.makeText(context, "Could not open map: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text("View Map")
                         }
                     }
                 }

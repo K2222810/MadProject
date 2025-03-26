@@ -13,9 +13,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Activity::class,
         Location::class,
         Status::class,
-        Position::class
+        Position::class,
+        FriendRequest::class  // Add FriendRequest entity
     ],
-    version = 2, // Increased from 1 to 2
+    version = 3, // Increase database version
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -26,10 +27,28 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun locationDao(): LocationDao
     abstract fun statusDao(): StatusDao
     abstract fun positionDao(): PositionDao
+    abstract fun friendRequestDao(): FriendRequestDao  // Add DAO for FriendRequests
 
     companion object {
         @Volatile
         private var instance: AppDatabase? = null
+
+        // Migration from 2 to 3 for adding FriendRequest table
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `friend_requests` (" +
+                            "`requestId` TEXT NOT NULL, " +
+                            "`senderId` TEXT NOT NULL, " +
+                            "`senderUsername` TEXT NOT NULL, " +
+                            "`receiverId` TEXT NOT NULL, " +
+                            "`status` TEXT NOT NULL, " +
+                            "`message` TEXT NOT NULL, " +
+                            "`timestamp` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`requestId`))"
+                )
+            }
+        }
 
         fun getDatabase(context: Context): AppDatabase {
             return instance ?: synchronized(this) {
@@ -38,8 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "staysafe.db"
                 )
-                    // Simplest approach - just recreate the database
-                    // This will delete all data, but is fine during development
+                    .addMigrations(MIGRATION_2_3)  // Add migration
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { instance = it }

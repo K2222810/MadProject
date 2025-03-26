@@ -16,4 +16,5 @@ sealed class Screen(val route: String) {
     }
     object AddUserScreen : Screen("add_user_screen")
     object MapScreen : Screen("map_screen")
+    object FriendRequestsScreen : Screen("friend_requests_screen")  // Add this line
 }

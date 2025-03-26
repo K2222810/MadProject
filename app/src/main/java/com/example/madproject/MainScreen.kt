@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -44,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.madproject.sampledata.UserSessionManager
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +56,8 @@ fun MainScreen(
     var alertActive by remember { mutableStateOf<Boolean?>(null) }
     val isLoggedIn = UserSessionManager.isLoggedIn.value
     val username = UserSessionManager.username.value
+    val currentUserId = UserSessionManager.userId.value
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -115,7 +120,7 @@ fun MainScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Button(
-                        onClick = { navController.navigate(Screen.MapScreen.route) },
+                        onClick = {},
                         modifier = Modifier.size(150.dp, 150.dp),
                         shape = RoundedCornerShape(30.dp)
                     ) {
@@ -131,7 +136,42 @@ fun MainScreen(
                         Text(text = "!", fontSize = 72.sp)
                     }
                 }
-                Spacer(modifier = Modifier.height(80.dp))
+                Spacer(modifier = Modifier.height(50.dp))
+
+                // My Account Section
+                Text(
+                    text = "My Account",
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Edit Profile button
+                Button(
+                    onClick = {
+                        if (isLoggedIn) {
+                            navController.navigate(Screen.EditUserScreen.createRoute(currentUserId))
+                        } else {
+                            Toast.makeText(context, "Please login first", Toast.LENGTH_SHORT).show()
+                            navController.navigate(Screen.LoginScreen.route)
+                        }
+                    },
+                    modifier = Modifier.size(270.dp, 50.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "My Profile",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Edit My Profile", fontSize = 18.sp)
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
 
                 // User Management Section
                 Text(
@@ -191,6 +231,22 @@ fun MainScreen(
                     modifier = Modifier.size(270.dp, 50.dp)
                 ) {
                     Text(text = "View Trips", fontSize = 18.sp)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Map Button
+                Button(
+                    onClick = {
+                        if (!isLoggedIn) {
+                            navController.navigate(Screen.LoginScreen.route)
+                        } else {
+                            navController.navigate(Screen.MapScreen.route)
+                        }
+                    },
+                    modifier = Modifier.size(270.dp, 50.dp)
+                ) {
+                    Text(text = "View Map", fontSize = 18.sp)
                 }
             }
         }

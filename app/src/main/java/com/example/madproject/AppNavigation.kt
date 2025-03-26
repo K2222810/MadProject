@@ -36,9 +36,13 @@ fun AppNavigation() {
         composable(Screen.UserListScreen.route) {
             UserListScreen(navController)
         }
-        // Add the missing AddUserScreen route
+        // Add User Screen
         composable(Screen.AddUserScreen.route) {
             AddUserScreen(navController)
+        }
+        // Friend Requests Screen
+        composable(Screen.FriendRequestsScreen.route) {
+            FriendRequestsScreen(navController)
         }
         // Edit Trip Screen with trip ID parameter
         composable(
@@ -52,6 +56,19 @@ fun AppNavigation() {
             val tripId = backStackEntry.arguments?.getString("tripId") ?: ""
             EditTripScreen(navController, tripId)
         }
+        // Edit User Screen with user ID parameter
+        composable(
+            route = Screen.EditUserScreen.route,
+            arguments = listOf(
+                navArgument("userId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            EditUserScreen(navController, userId)
+        }
+        // Map Screen
         composable(Screen.MapScreen.route) {
             MapScreen(navController)
         }
