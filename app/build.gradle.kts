@@ -70,10 +70,6 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)
 
-    // Remove these lines if they exist in your build.gradle:
-    // implementation(libs.play.services.maps.v1910)
-    // implementation(libs.androidx.appcompat.v170)
-
     // Core & Compose dependencies - Keep these as they are
     implementation(libs.core)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -84,7 +80,8 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
-
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    
     // Icons
     implementation(libs.androidx.material.icons.extended)
 

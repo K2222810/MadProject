@@ -14,14 +14,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Location::class,
         Status::class,
         Position::class,
-        FriendRequest::class  // Add FriendRequest entity
+        FriendRequest::class,
+        Alert::class  // Add Alert entity
     ],
-    version = 3, // Increase database version
+    version = 4, // Increment version number
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
+    abstract fun alertDao(): AlertDao
     abstract fun contactDao(): ContactDao
     abstract fun activityDao(): ActivityDao
     abstract fun locationDao(): LocationDao

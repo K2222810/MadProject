@@ -72,5 +72,9 @@ fun AppNavigation() {
         composable(Screen.MapScreen.route) {
             MapScreen(navController)
         }
+
+        composable(Screen.NotificationsScreen.route) {
+            NotificationsScreen(navController)
+        }
     }
 }

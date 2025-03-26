@@ -176,14 +176,10 @@ fun AddTripsScreen(navController: NavController) {
                     description = activityDescription,
                     fromLocationId = fromLocationId,
                     fromLocationName = fromLocation,
-                    leaveTime = leaveDate?.let {
-                        it.timeInMillis
-                    } ?: System.currentTimeMillis(),
+                    leaveTime = leaveDate?.timeInMillis ?: System.currentTimeMillis(),
                     toLocationId = toLocationId,
                     toLocationName = toLocation,
-                    arriveTime = arriveDate?.let {
-                        it.timeInMillis
-                    } ?: System.currentTimeMillis(),
+                    arriveTime = arriveDate?.timeInMillis ?: System.currentTimeMillis(),
                     statusId = statusId,
                     statusName = selectedStatus
                 )
@@ -218,6 +214,28 @@ fun AddTripsScreen(navController: NavController) {
 
                     if (savedSuccessfully) {
                         Log.d(TAG, "Database save successful, activity verified in database")
+
+                        // Send notification to contacts directly
+                        try {
+                            val alert = Alert(
+                                alertId = UUID.randomUUID().toString(),
+                                userId = currentUserId,
+                                username = currentUsername,
+                                message = "$currentUsername has created a new trip: $activityName",
+                                location = "Trip notification",
+                                timestamp = System.currentTimeMillis(),
+                                isActive = true
+                            )
+
+                            withContext(Dispatchers.IO) {
+                                database.alertDao().insertAlert(alert)
+                            }
+
+                            Log.d(TAG, "Trip notification sent successfully")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error sending trip notification: ${e.message}", e)
+                        }
+
                         Toast.makeText(context, "Trip saved successfully!", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
                     } else {
