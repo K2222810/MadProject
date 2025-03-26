@@ -15,6 +15,7 @@ import com.google.android.gms.maps.model.MarkerOptions
 class MapsMarker : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_MadProject) // Ensure a compatible theme is set
         super.onCreate(savedInstanceState)
         // Retrieve the content view that renders the map.
         setContentView(R.layout.activity_maps)

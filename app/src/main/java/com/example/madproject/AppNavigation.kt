@@ -52,5 +52,8 @@ fun AppNavigation() {
             val tripId = backStackEntry.arguments?.getString("tripId") ?: ""
             EditTripScreen(navController, tripId)
         }
+        composable(Screen.MapScreen.route) {
+            MapScreen(navController)
+        }
     }
 }

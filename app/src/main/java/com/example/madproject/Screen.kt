@@ -15,4 +15,5 @@ sealed class Screen(val route: String) {
         fun createRoute(userId: String): String = "edit_user_screen/$userId"
     }
     object AddUserScreen : Screen("add_user_screen")
+    object MapScreen : Screen("map_screen")
 }
