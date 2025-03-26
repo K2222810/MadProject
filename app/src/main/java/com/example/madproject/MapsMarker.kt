@@ -48,6 +48,13 @@ class MapsMarker : AppCompatActivity(), OnMapReadyCallback {
             if (location != null) {
                 val userLatLng = LatLng(location.latitude, location.longitude)
                 googleMap.addMarker(MarkerOptions().position(userLatLng).title("Your Location"))
+                if (checkPermissions()) {
+                    try {
+                        googleMap.isMyLocationEnabled = true
+                    } catch (securityException: SecurityException) {
+                        Toast.makeText(this, "Location permissions not granted", Toast.LENGTH_SHORT).show()
+                    }
+                }
                 googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 15f))
             } else {
                 Toast.makeText(this, "Failed to get location", Toast.LENGTH_SHORT).show()

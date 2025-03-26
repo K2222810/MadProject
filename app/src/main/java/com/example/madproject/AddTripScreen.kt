@@ -1,6 +1,7 @@
 package com.example.madproject
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -65,24 +66,38 @@ fun AddTripsScreen(navController: NavController) {
 
     val statuses = listOf("Planned", "In Progress", "Completed", "Cancelled", "Other")
 
-    fun showDatePickerDialog(isLeaveTime: Boolean) {
+    fun showDateTimePickerDialog(isLeaveTime: Boolean) {
         val calendar = Calendar.getInstance()
+
+        // First, show the DatePickerDialog
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                val selectedCalendar = Calendar.getInstance()
-                selectedCalendar.set(year, month, dayOfMonth)
+                // After date is selected, show TimePickerDialog
+                TimePickerDialog(
+                    context,
+                    { _, hourOfDay, minute ->
+                        val selectedCalendar = Calendar.getInstance()
+                        selectedCalendar.set(year, month, dayOfMonth, hourOfDay, minute)
 
-                val formattedDate = "$year-${month + 1}-$dayOfMonth"
-                if (isLeaveTime) {
-                    activityLeave = formattedDate
-                    leaveDate = selectedCalendar
-                    Log.d(TAG, "Leave date set: $formattedDate, timestamp: ${selectedCalendar.timeInMillis}")
-                } else {
-                    activityArrive = formattedDate
-                    arriveDate = selectedCalendar
-                    Log.d(TAG, "Arrive date set: $formattedDate, timestamp: ${selectedCalendar.timeInMillis}")
-                }
+                        val formattedDate = "$year-${month + 1}-$dayOfMonth"
+                        val formattedTime = String.format("%02d:%02d", hourOfDay, minute)
+                        val formattedDateTime = "$formattedDate $formattedTime"
+
+                        if (isLeaveTime) {
+                            activityLeave = formattedDateTime
+                            leaveDate = selectedCalendar
+                            Log.d(TAG, "Leave date and time set: $formattedDateTime, timestamp: ${selectedCalendar.timeInMillis}")
+                        } else {
+                            activityArrive = formattedDateTime
+                            arriveDate = selectedCalendar
+                            Log.d(TAG, "Arrive date and time set: $formattedDateTime, timestamp: ${selectedCalendar.timeInMillis}")
+                        }
+                    },
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    calendar.get(Calendar.MINUTE),
+                    true // Use 24-hour format
+                ).show()
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -259,11 +274,11 @@ fun AddTripsScreen(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Button(onClick = { showDatePickerDialog(true) }, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { showDateTimePickerDialog(true) }, modifier = Modifier.fillMaxWidth()) {
                     Text(if (activityLeave.isEmpty()) "Select Leave Time" else "Leave Time: $activityLeave")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { showDatePickerDialog(false) }, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { showDateTimePickerDialog(false) }, modifier = Modifier.fillMaxWidth()) {
                     Text(if (activityArrive.isEmpty()) "Select Arrive Time" else "Arrive Time: $activityArrive")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
