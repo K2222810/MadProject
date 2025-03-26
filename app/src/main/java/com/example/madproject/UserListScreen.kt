@@ -1,5 +1,6 @@
 package com.example.madproject
 
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.madproject.sampledata.Contact
 import com.example.madproject.sampledata.DatabaseInstance
 import com.example.madproject.sampledata.User
 import com.example.madproject.sampledata.UserSessionManager
@@ -34,6 +36,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "UserListScreen"
+
+// Data class to hold contact information with user details
+data class ContactWithUserDetails(
+    val contactId: String,
+    val userId: String,
+    val contactUserId: String,
+    val label: String,
+    val dateCreated: Long,
+    // User details
+    val username: String?,
+    val firstName: String?,
+    val lastName: String?,
+    val phone: String?
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,141 +64,139 @@ fun UserListScreen(
     val isLoggedIn = UserSessionManager.isLoggedIn.value
     val currentUserId = UserSessionManager.userId.value
 
-    // State for users
-    var allUsers by remember { mutableStateOf<List<User>>(emptyList()) }
-    var displayedUsers by remember { mutableStateOf<List<User>>(emptyList()) }
+    // State for contacts
+    var allContacts by remember { mutableStateOf<List<ContactWithUserDetails>>(emptyList()) }
+    var displayedContacts by remember { mutableStateOf<List<ContactWithUserDetails>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showDeleteOptions by remember { mutableStateOf<User?>(null) }
+    var contactToDelete by remember { mutableStateOf<ContactWithUserDetails?>(null) }
 
     // Search state
     var searchQuery by remember { mutableStateOf("") }
 
-    // Function to filter users based on search query
-    fun filterUsers(query: String) {
+    // Function to filter contacts based on search query
+    fun filterContacts(query: String) {
         if (query.isBlank()) {
-            displayedUsers = allUsers
+            displayedContacts = allContacts
             return
         }
 
         val lowerCaseQuery = query.lowercase()
-        displayedUsers = allUsers.filter { user ->
-            val firstName = user.firstName?.lowercase() ?: ""
-            val lastName = user.lastName?.lowercase() ?: ""
+        displayedContacts = allContacts.filter { contact ->
+            val firstName = contact.firstName?.lowercase() ?: ""
+            val lastName = contact.lastName?.lowercase() ?: ""
             val fullName = "$firstName $lastName"
-            val phone = user.phone?.lowercase() ?: ""
-            val username = user.username?.lowercase() ?: ""
+            val phone = contact.phone?.lowercase() ?: ""
+            val username = contact.username?.lowercase() ?: ""
+            val label = contact.label.lowercase()
 
             fullName.contains(lowerCaseQuery) ||
                     phone.contains(lowerCaseQuery) ||
-                    username.contains(lowerCaseQuery)
+                    username.contains(lowerCaseQuery) ||
+                    label.contains(lowerCaseQuery)
         }
     }
 
-    // Function to refresh users from database
-    fun loadUsers() {
+    // Function to load contacts from database
+    fun loadContacts() {
         isLoading = true
         errorMessage = null
 
         scope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                val contactsWithUserDetails = withContext(Dispatchers.IO) {
+                    // Get all contacts for the current user
+                    val contacts = database.contactDao().getAllContacts()
+                        .filter { it.userId == currentUserId }
+
+                    // Get all users to get their details
                     val users = database.userDao().getAllUsers()
-                    Log.d(TAG, "Loaded ${users.size} users from database")
-                    allUsers = users
-                    // Apply current search filter
-                    if (searchQuery.isBlank()) {
-                        displayedUsers = users
-                    } else {
-                        filterUsers(searchQuery)
+
+                    // Combine contact data with user details
+                    contacts.mapNotNull { contact ->
+                        val user = users.find { it.userId == contact.contactUserId }
+                        if (user != null) {
+                            ContactWithUserDetails(
+                                contactId = contact.contactId,
+                                userId = contact.userId,
+                                contactUserId = contact.contactUserId,
+                                label = contact.label,
+                                dateCreated = contact.dateCreated,
+                                username = user.username,
+                                firstName = user.firstName,
+                                lastName = user.lastName,
+                                phone = user.phone
+                            )
+                        } else null
                     }
                 }
+
+                Log.d(TAG, "Loaded ${contactsWithUserDetails.size} contacts for user $currentUserId")
+                allContacts = contactsWithUserDetails
+
+                // Apply current search filter
+                if (searchQuery.isBlank()) {
+                    displayedContacts = contactsWithUserDetails
+                } else {
+                    filterContacts(searchQuery)
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading users: ${e.message}", e)
-                errorMessage = "Failed to load users: ${e.localizedMessage}"
+                Log.e(TAG, "Error loading contacts: ${e.message}", e)
+                errorMessage = "Failed to load contacts: ${e.localizedMessage}"
             } finally {
                 isLoading = false
             }
         }
     }
 
-    // Function to remove a user from the list
-    fun removeUserFromList(user: User, permanent: Boolean) {
-        if (user.userId == currentUserId) {
-            Toast.makeText(context, "You cannot remove yourself from the list", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        // Filter user out of the displayed list
-        displayedUsers = displayedUsers.filter { it.userId != user.userId }
-
-        if (permanent) {
-            // Also remove from database if permanent removal is chosen
-            scope.launch {
-                try {
-                    // Get contacts for the current user
-                    val contacts = withContext(Dispatchers.IO) {
-                        database.contactDao().getAllContacts()
-                    }
-
-                    // Find the contact entry connecting current user to the selected user
-                    val contactToDelete = contacts.firstOrNull {
-                        it.userId == currentUserId && it.contactUserId == user.userId
-                    }
-
-                    if (contactToDelete != null) {
-                        // Delete from database
-                        withContext(Dispatchers.IO) {
-                            database.contactDao().deleteContactById(contactToDelete.contactId)
-                        }
-                        Toast.makeText(context, "User permanently removed from contacts", Toast.LENGTH_SHORT).show()
-
-                        // Also remove from allUsers if it was in there
-                        allUsers = allUsers.filter { it.userId != user.userId }
-                    } else {
-                        Toast.makeText(context, "Contact relationship not found in database", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error deleting contact: ${e.message}", e)
-                    Toast.makeText(context, "Error removing contact: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+    // Function to delete a contact
+    fun deleteContact(contact: ContactWithUserDetails) {
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    database.contactDao().deleteContactById(contact.contactId)
                 }
+
+                // Remove from displayed and all contacts lists
+                displayedContacts = displayedContacts.filter { it.contactId != contact.contactId }
+                allContacts = allContacts.filter { it.contactId != contact.contactId }
+
+                Toast.makeText(context, "Contact removed successfully", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting contact: ${e.message}", e)
+                Toast.makeText(context, "Error removing contact: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
-        } else {
-            Toast.makeText(context, "User removed from list (temporarily)", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Load users when screen is first displayed
+    // Load contacts when screen is first displayed
     LaunchedEffect(Unit) {
-        loadUsers()
+        loadContacts()
     }
 
-    // Delete options dialog
-    showDeleteOptions?.let { user ->
+    // Delete confirmation dialog
+    contactToDelete?.let { contact ->
         AlertDialog(
-            onDismissRequest = { showDeleteOptions = null },
-            title = { Text("Remove User") },
+            onDismissRequest = { contactToDelete = null },
+            title = { Text("Remove Contact") },
             text = {
-                Text("Do you want to temporarily hide this user or permanently remove them from your contacts?")
+                Text("Are you sure you want to remove ${contact.username ?: "this contact"} from your contacts?")
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        removeUserFromList(user, true) // Permanent deletion
-                        showDeleteOptions = null
+                        deleteContact(contact)
+                        contactToDelete = null
                     }
                 ) {
-                    Text("Remove Permanently")
+                    Text("Remove")
                 }
             },
             dismissButton = {
-                Button(
-                    onClick = {
-                        removeUserFromList(user, false) // Just hide temporarily
-                        showDeleteOptions = null
-                    }
+                OutlinedButton(
+                    onClick = { contactToDelete = null }
                 ) {
-                    Text("Hide Temporarily")
+                    Text("Cancel")
                 }
             }
         )
@@ -191,22 +205,10 @@ fun UserListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("User List") },
+                title = { Text("My Contacts") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    // Reset button - shows all users again
-                    if (displayedUsers.size < allUsers.size) {
-                        TextButton(onClick = {
-                            searchQuery = ""
-                            displayedUsers = allUsers
-                            Toast.makeText(context, "Showing all users", Toast.LENGTH_SHORT).show()
-                        }) {
-                            Text("Show All")
-                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -237,7 +239,7 @@ fun UserListScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "You need to login to view users",
+                            text = "You need to login to view your contacts",
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(24.dp))
@@ -273,13 +275,13 @@ fun UserListScreen(
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { loadUsers() }) {
+                        Button(onClick = { loadContacts() }) {
                             Text("Try Again")
                         }
                     }
                 }
                 else -> {
-                    // Main content with search and user list
+                    // Main content with search and contact list
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -288,12 +290,12 @@ fun UserListScreen(
                             value = searchQuery,
                             onValueChange = {
                                 searchQuery = it
-                                filterUsers(it)
+                                filterContacts(it)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            placeholder = { Text("Search by name or phone") },
+                            placeholder = { Text("Search contacts") },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Search,
@@ -304,7 +306,7 @@ fun UserListScreen(
                                 if (searchQuery.isNotEmpty()) {
                                     IconButton(onClick = {
                                         searchQuery = ""
-                                        displayedUsers = allUsers
+                                        displayedContacts = allContacts
                                     }) {
                                         Icon(
                                             Icons.Default.Clear,
@@ -323,7 +325,7 @@ fun UserListScreen(
                         // Display search results count if searching
                         if (searchQuery.isNotEmpty()) {
                             Text(
-                                text = "Found ${displayedUsers.size} results",
+                                text = "Found ${displayedContacts.size} results",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp),
@@ -333,8 +335,8 @@ fun UserListScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        if (displayedUsers.isEmpty()) {
-                            // Empty results state
+                        if (displayedContacts.isEmpty()) {
+                            // Empty contacts state
                             Column(
                                 modifier = Modifier
                                     .weight(1f)
@@ -346,79 +348,81 @@ fun UserListScreen(
                                 if (searchQuery.isNotEmpty()) {
                                     // No search results
                                     Text(
-                                        text = "No users found matching '$searchQuery'",
+                                        text = "No contacts found matching '$searchQuery'",
                                         fontSize = 16.sp,
                                         textAlign = TextAlign.Center
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Button(onClick = {
                                         searchQuery = ""
-                                        displayedUsers = allUsers
+                                        displayedContacts = allContacts
                                     }) {
                                         Text("Clear Search")
                                     }
-                                } else if (allUsers.isEmpty()) {
-                                    // No users at all
-                                    Text(
-                                        text = "No Users Found",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Button(onClick = { navController.navigate(Screen.AddUserScreen.route) }) {
-                                        Text("Add User")
-                                    }
                                 } else {
-                                    // Users exist but all have been removed from display
+                                    // No contacts at all
                                     Text(
-                                        text = "All Users Removed",
+                                        text = "No Contacts Found",
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "You've removed all users from the list",
+                                        text = "You haven't added any contacts yet",
                                         textAlign = TextAlign.Center
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    Button(onClick = {
-                                        displayedUsers = allUsers
-                                    }) {
-                                        Text("Show All Users")
-                                    }
                                 }
                             }
                         } else {
-                            // User list
+                            // Contact list
                             LazyColumn(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(displayedUsers) { user ->
-                                    UserCard(
-                                        user = user,
-                                        currentUserId = currentUserId,
+                                items(displayedContacts) { contact ->
+                                    ContactCard(
+                                        contact = contact,
                                         onRemove = {
-                                            if (user.userId == currentUserId) {
-                                                Toast.makeText(context, "You cannot remove yourself from the list", Toast.LENGTH_LONG).show()
-                                            } else {
-                                                showDeleteOptions = user
-                                            }
+                                            contactToDelete = contact
                                         }
                                     )
                                 }
                             }
                         }
 
-                        // Button to add a new user
-                        Button(
-                            onClick = { navController.navigate(Screen.AddUserScreen.route) },
+                        // Row with buttons
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Add New User")
+                            // Add user button
+                            Button(
+                                onClick = { navController.navigate(Screen.AddUserScreen.route) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Add Contact")
+                            }
+
+                            // Maps button
+                            Button(
+                                onClick = {
+                                    try {
+                                        // Navigate to the MapsMarker screen
+                                        val intent = Intent(context, MapsMarker::class.java)
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Error launching maps: ${e.message}", e)
+                                        Toast.makeText(context, "Could not open maps: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("View Map")
+                            }
                         }
                     }
                 }
@@ -428,13 +432,10 @@ fun UserListScreen(
 }
 
 @Composable
-fun UserCard(
-    user: User,
-    currentUserId: String,
+fun ContactCard(
+    contact: ContactWithUserDetails,
     onRemove: () -> Unit
 ) {
-    val isCurrentUser = user.userId == currentUserId
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -444,14 +445,14 @@ fun UserCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Username and status indicator
+            // Username and label
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = user.username ?: "Unknown",
+                    text = contact.username ?: "Unknown",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -459,16 +460,16 @@ fun UserCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                if (isCurrentUser) {
+                if (contact.label.isNotEmpty()) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF4CAF50).copy(alpha = 0.2f))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "You",
-                            color = Color(0xFF4CAF50),
+                            text = contact.label,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -490,7 +491,7 @@ fun UserCard(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "${user.firstName ?: ""} ${user.lastName ?: ""}",
+                    text = "${contact.firstName ?: ""} ${contact.lastName ?: ""}",
                     fontSize = 14.sp
                 )
             }
@@ -509,29 +510,24 @@ fun UserCard(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = user.phone ?: "N/A",
+                    text = contact.phone ?: "N/A",
                     fontSize = 14.sp
                 )
             }
 
-            // Only show remove button if not the current user
-            if (!isCurrentUser) {
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                // Remove button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    IconButton(
-                        onClick = onRemove
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Remove from list",
-                            tint = Color.Gray
-                        )
-                    }
+            // Remove button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Remove contact",
+                        tint = Color.Gray
+                    )
                 }
             }
         }
