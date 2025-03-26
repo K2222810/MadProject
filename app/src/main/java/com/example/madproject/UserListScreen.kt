@@ -1,6 +1,5 @@
 package com.example.madproject
 
-import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -14,7 +13,6 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -413,37 +411,14 @@ fun UserListScreen(
                             }
                         }
 
-                        // Row with buttons
-                        Row(
+                        // Button to add a new user
+                        Button(
+                            onClick = { navController.navigate(Screen.AddUserScreen.route) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(16.dp)
                         ) {
-                            // Add user button
-                            Button(
-                                onClick = { navController.navigate(Screen.AddUserScreen.route) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Add User")
-                            }
-
-                            // Maps button
-                            Button(
-                                onClick = {
-                                    try {
-                                        // Navigate to the MapsMarker screen
-                                        val intent = android.content.Intent(context, MapsMarker::class.java)
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Error launching maps: ${e.message}", e)
-                                        Toast.makeText(context, "Could not open maps: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("View Map")
-                            }
+                            Text("Add New User")
                         }
                     }
                 }

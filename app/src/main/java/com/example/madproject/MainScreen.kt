@@ -115,7 +115,7 @@ fun MainScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Button(
-                        onClick = {navController.navigate(Screen.MapScreen.route)},
+                        onClick = {},
                         modifier = Modifier.size(150.dp, 150.dp),
                         shape = RoundedCornerShape(30.dp)
                     ) {

@@ -43,9 +43,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MapsMarker"
-            android:theme="@style/Theme.MadProject"
-            tools:ignore="DuplicateActivity" />
     </application>
 
 </manifest>
