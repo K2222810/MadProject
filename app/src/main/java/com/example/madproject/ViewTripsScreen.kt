@@ -66,7 +66,7 @@ fun ViewTripsScreen(
     var tripToDelete by remember { mutableStateOf<Activity?>(null) }
 
     // Format for displaying dates
-    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val dateFormatter = remember { SimpleDateFormat("dd MMM, yyyy HH:mm", Locale.getDefault()) }
 
     // Function to refresh trips from database
     fun loadTrips() {

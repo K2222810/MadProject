@@ -171,15 +171,19 @@ fun AddTripsScreen(navController: NavController) {
                 val activity = Activity(
                     activityId = activityId,
                     name = activityName,
-                    userId = currentUserId,  // Use logged-in user's ID
-                    username = currentUsername,  // Use logged-in username
+                    userId = currentUserId,
+                    username = currentUsername,
                     description = activityDescription,
                     fromLocationId = fromLocationId,
                     fromLocationName = fromLocation,
-                    leaveTime = leaveDate?.timeInMillis ?: System.currentTimeMillis(),
+                    leaveTime = leaveDate?.let {
+                        it.timeInMillis
+                    } ?: System.currentTimeMillis(),
                     toLocationId = toLocationId,
                     toLocationName = toLocation,
-                    arriveTime = arriveDate?.timeInMillis ?: System.currentTimeMillis(),
+                    arriveTime = arriveDate?.let {
+                        it.timeInMillis
+                    } ?: System.currentTimeMillis(),
                     statusId = statusId,
                     statusName = selectedStatus
                 )
