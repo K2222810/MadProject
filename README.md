@@ -1,16 +1,10 @@
 # MadProject
 An Android project built with Kotlin and Gradle.
 
-## Screenshot/Logo
-Add a screenshot here.
-
 ## Description
 MadProject is an Android application project that appears to be built with Kotlin and Gradle. It was a useful way to practice mobile app structure, Android project organisation, and working with a native app codebase.
 
 This project helped strengthen my understanding of how Android apps are organised and built.
-
-## Deployment Link
-This project does not appear to be a deployed web app, but you can add installation or run instructions here.
 
 ## Planning
 Before building, the focus was likely on how the Android app screens, resources, and app logic would fit together.
